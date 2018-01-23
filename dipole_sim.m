@@ -8,9 +8,9 @@ warning off
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % General settings
 trl_sec=2;
-EEG.srate=500;
-EEG.pnts=EEG.srate*trl_sec';
-EEG.times=-2+1/EEG.srate:1/EEG.srate:0;
+EEGopts.srate=500;
+EEGopts.pnts=EEGopts.srate*trl_sec';
+EEGopts.times=-2+1/EEGopts.srate:1/EEGopts.srate:0;
 n_trl=10;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
@@ -32,8 +32,9 @@ vol.o = [0 0 0];          % center of sphere
 % Simulating dipole with filter bank
 phase_b=0:pi/4:pi;
 
-
+AVG_median=nan(length(phase_b),length(EEGopts.times));
 for m=1:length(phase_b)
+    
     cfg         = [];
     cfg.vol     = vol;             % see above
     cfg.elec    = elec;            % see above
@@ -43,48 +44,23 @@ for m=1:length(phase_b)
     cfg.dip.phase = phase_b(m);
     cfg.ntrials = n_trl;
     cfg.triallength = trl_sec;
-    cfg.fsample =  EEG.srate;
+    cfg.fsample =  EEGopts.srate;
     cfg.relnoise = .1;
     raw1 = ft_dipolesimulation(cfg);
     
-    %% FREQ SLIDING
+    disp(['Computing phase: ',num2str(m)])
     
-    freqslideFilt=zeros(length(EEG.times),n_chan,n_trl);
+    % FREQ SLIDING
+    freqslideFilt=zeros(length(EEGopts.times),n_chan,n_trl);
     for j=1:n_trl
         for k=1:n_chan
             data2use = squeeze(raw1.trial{j}(k,:));
-            freq2use = 10; % hz
-            % define convolution parameters
-            wavt  = -.25:1/EEG.srate:.25; % time vector for wavelet
-            nData = EEG.pnts;
-            nKern = length(wavt);
-            nConv = nData+nKern-1;
-            hwave = floor((length(wavt)-1)/2);
-            s = 8 / (2*pi*freq2use); % for gaussian
-            cmwX = fft( exp(1i*2*pi*freq2use*wavt) .* exp( -(wavt.^2)/(2*s^2) ) ,nConv);
-            cmwX = cmwX ./ max(cmwX);
-            % convolution and freq slid
-            as = ifft( fft(data2use,nConv) .* cmwX );
-            as = as(hwave+1:end-hwave);
-            freqslide = EEG.srate*diff(unwrap(angle(as)))/(2*pi);
-            % now apply median filter
-            n_order = 10;
-            orders  = linspace(10,400,n_order)/2;
-            orders  = round( orders/(1000/EEG.srate) );
-            phasedmed = zeros(length(orders),EEG.pnts);
-            for oi=1:n_order
-                for ti=1:EEG.pnts
-                    temp = sort(freqslide(max(ti-orders(oi),1):min(ti+orders(oi),EEG.pnts-1)));
-                    phasedmed(oi,ti) = temp(floor(numel(temp)/2)+1);
-                end
-            end
-            % the final step is to take the mean of medians
-            freqslideFilt(:,k,j) = mean(phasedmed,1);
+            central_freq=10;
+            num_cycles=5;
+            freqslideFilt(:,k,j) = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
         end
-        
     end
     AVG_median(m,:)=mean(mean(freqslideFilt,3),2);
-    disp(['Computing phase: ',num2str(m)])
 
 end
 
@@ -93,7 +69,7 @@ end
 figure 
 for m=1:length(phase_b)
     LEGEND{m}=['Phase at: ',num2str(phase_b(m)),'rad'];
-    plot(EEG.times(EEG.times>-1),AVG_median(m,EEG.times>-1))
+    plot(EEGopts.times(EEGopts.times>-1),AVG_median(m,EEGopts.times>-1))
     hold on 
 end
 legend(LEGEND{:},'Location','Best')
