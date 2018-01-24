@@ -18,10 +18,27 @@ if nargin<4
     num_cycles=4;
 end
 
+%% Prediction method
+
+flag_methods=1;
+
+if flag_methods==1
+    
+    opts.secPH=.3;
+    [yy] = CCN_AR_pred(data2use,opts.times,opts);
+%     figure
+%     plot(tt,yy)
+else
+    yy=data2use;
+end
+
+
+%% FS computation
 freq2use = central_freq; % hz
+nData = length(yy);
+
 % define convolution parameters
 wavt  = -((1/freq2use)*num_cycles)/2:1/opts.srate:((1/freq2use)*num_cycles)/2; % time vector for wavelet
-nData = opts.pnts;
 nKern = length(wavt);
 nConv = nData+nKern-1;
 hwave = floor((length(wavt)-1)/2);
@@ -29,22 +46,26 @@ s = 8 / (2*pi*freq2use); % for gaussian
 cmwX = fft( exp(1i*2*pi*freq2use*wavt) .* exp( -(wavt.^2)/(2*s^2) ) ,nConv);
 cmwX = cmwX ./ max(cmwX);
 % convolution and freq slid
-as = ifft( fft(data2use,nConv) .* cmwX );
+as = ifft( fft(yy,nConv) .* cmwX );
 as = as(hwave+1:end-hwave);
+as=as(1:opts.pnts);
+
+nData=length(as);
 freqslide = opts.srate*diff(unwrap(angle(as)))/(2*pi);
 % now apply median filter
 n_order = 10;
 orders  = linspace(10,400,n_order)/2;
 orders  = round( orders/(1000/opts.srate) );
-phasedmed = zeros(length(orders),opts.pnts);
+phasedmed = zeros(length(orders),nData);
 for oi=1:n_order
-    for ti=1:opts.pnts
-        temp = sort(freqslide(max(ti-orders(oi),1):min(ti+orders(oi),opts.pnts-1)));
+    for ti=1:nData
+        temp = sort(freqslide(max(ti-orders(oi),1):min(ti+orders(oi),nData-1)));
         phasedmed(oi,ti) = temp(floor(numel(temp)/2)+1);
     end
 end
 % the final step is to take the mean of medians
 istan_freq = mean(phasedmed,1);
+
 
 end
 

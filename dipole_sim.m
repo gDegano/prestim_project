@@ -8,7 +8,7 @@ warning off
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % General settings
 trl_sec=2;
-EEGopts.srate=500;
+EEGopts.srate=256;
 EEGopts.pnts=EEGopts.srate*trl_sec';
 EEGopts.times=-2+1/EEGopts.srate:1/EEGopts.srate:0;
 n_trl=10;
@@ -45,7 +45,7 @@ for m=1:length(phase_b)
     cfg.ntrials = n_trl;
     cfg.triallength = trl_sec;
     cfg.fsample =  EEGopts.srate;
-    cfg.relnoise = .1;
+    cfg.relnoise = .3;
     raw1 = ft_dipolesimulation(cfg);
     
     disp(['Computing phase: ',num2str(m)])
@@ -58,6 +58,7 @@ for m=1:length(phase_b)
             central_freq=10;
             num_cycles=5;
             freqslideFilt(:,k,j) = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
+           % pause(0.5)
         end
     end
     AVG_median(m,:)=mean(mean(freqslideFilt,3),2);
