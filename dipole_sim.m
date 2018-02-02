@@ -7,10 +7,10 @@ warning off
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % General settings
-trl_sec=2;
+trl_sec=3;
 EEGopts.srate=256;
 EEGopts.pnts=EEGopts.srate*trl_sec';
-EEGopts.times=-2+1/EEGopts.srate:1/EEGopts.srate:0;
+EEGopts.times=-2:1/EEGopts.srate:1-1/EEGopts.srate;
 n_trl=10;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
@@ -31,10 +31,7 @@ vol.o = [0 0 0];          % center of sphere
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Simulating dipole with filter bank
 phase_b=0:pi/4:pi;
-
-AVG_median=nan(length(phase_b),length(EEGopts.times));
 for m=1:length(phase_b)
-    
     cfg         = [];
     cfg.vol     = vol;             % see above
     cfg.elec    = elec;            % see above
@@ -45,35 +42,76 @@ for m=1:length(phase_b)
     cfg.ntrials = n_trl;
     cfg.triallength = trl_sec;
     cfg.fsample =  EEGopts.srate;
-    cfg.relnoise = .3;
-    raw1 = ft_dipolesimulation(cfg);
-    
+    cfg.relnoise = .8;
+    raw{m}= ft_dipolesimulation(cfg);
+end
+
+%% MODELS
+
+clc
+AVG_median=nan(length(phase_b),length(EEGopts.times)-EEGopts.srate);
+EEGopts.model=1;
+for m=1:length(phase_b)
+   
     disp(['Computing phase: ',num2str(m)])
-    
     % FREQ SLIDING
-    freqslideFilt=zeros(length(EEGopts.times),n_chan,n_trl);
+    freqslideFilt=zeros(length(EEGopts.times)-EEGopts.srate,n_chan,n_trl);
     for j=1:n_trl
         for k=1:n_chan
-            data2use = squeeze(raw1.trial{j}(k,:));
+            data2use = squeeze(raw{m}.trial{j}(k,1:EEGopts.srate*2));
             central_freq=10;
             num_cycles=5;
-            freqslideFilt(:,k,j) = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
-           % pause(0.5)
+            temp_freq=CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
+            freqslideFilt(:,k,j) = temp_freq(1:EEGopts.srate*2);%
         end
+        disp(['Computing trial #',num2str(j)])
     end
     AVG_median(m,:)=mean(mean(freqslideFilt,3),2);
 
 end
 
-%% PLOTTING
-
+% PLOTTING
 figure 
-for m=1:length(phase_b)
+for m=[1 2 3 5]
     LEGEND{m}=['Phase at: ',num2str(phase_b(m)),'rad'];
-    plot(EEGopts.times(EEGopts.times>-1),AVG_median(m,EEGopts.times>-1))
+    plot(EEGopts.times(EEGopts.srate*+1:EEGopts.srate*2),AVG_median(m,end-EEGopts.srate:end))
     hold on 
 end
 legend(LEGEND{:},'Location','Best')
+
+
+
+%% REAL DATA
+
+AVG_median_real=nan(length(phase_b),length(EEGopts.times));
+EEGopts.model=0;
+for m=1:length(phase_b)
+   
+    disp(['Computing phase: ',num2str(m)])
+    % FREQ SLIDING
+    freqslideFilt=zeros(length(EEGopts.times),n_chan,n_trl);
+    for j=1:n_trl
+        for k=1:n_chan
+            data2use = squeeze(raw{m}.trial{j}(k,:));
+            central_freq=10;
+            num_cycles=5;
+            freqslideFilt(:,k,j) = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
+        end
+        disp(['Computing trial #',num2str(j)])
+    end
+    AVG_median_real(m,:)=mean(mean(freqslideFilt,3),2);
+
+end
+
+%plots
+figure 
+for m=[1 2 3 5]
+    LEGEND{m}=['Phase at: ',num2str(phase_b(m)),'rad'];
+    plot(EEGopts.times(EEGopts.times>-1 & EEGopts.times<=0),AVG_median_real(m,EEGopts.times>-1 & EEGopts.times<=0))
+    hold on 
+end
+legend(LEGEND{:},'Location','Best')
+
 
 
 

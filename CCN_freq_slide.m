@@ -20,14 +20,10 @@ end
 
 %% Prediction method
 
-flag_methods=1;
-
-if flag_methods==1
-    
-    opts.secPH=.3;
-    [yy] = CCN_AR_pred(data2use,opts.times,opts);
-%     figure
-%     plot(tt,yy)
+if opts.model==1
+    opts.secPH=.2;
+%    [yy] = CCN_param_estim(data2use,opts.times,opts );
+    [yy] = CCN_AR_pred(data2use,opts.times(1:opts.srate*2),opts);
 else
     yy=data2use;
 end
@@ -48,10 +44,11 @@ cmwX = cmwX ./ max(cmwX);
 % convolution and freq slid
 as = ifft( fft(yy,nConv) .* cmwX );
 as = as(hwave+1:end-hwave);
-as=as(1:opts.pnts);
-
-nData=length(as);
 freqslide = opts.srate*diff(unwrap(angle(as)))/(2*pi);
+
+% close
+% plot(freqslide)
+
 % now apply median filter
 n_order = 10;
 orders  = linspace(10,400,n_order)/2;
