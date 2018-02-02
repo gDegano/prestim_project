@@ -7,7 +7,7 @@ warning off
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % General settings
-trl_sec       = 1;
+trl_sec       = 3; % has to be 3 atm  
 EEGopts.srate = 256;
 EEGopts.pnts  = EEGopts.srate*trl_sec';
 EEGopts.times = -trl_sec+1/EEGopts.srate:1/EEGopts.srate:0;
@@ -43,8 +43,8 @@ for m=1:length(phase_b)
     cfg.ntrials       = n_trl;
     cfg.triallength   = trl_sec;
     cfg.fsample       = EEGopts.srate;
-    cfg.relnoise      = 10;
-    raw1 = ft_dipolesimulation(cfg);
+    cfg.relnoise      = 3;
+    raw{m} = ft_dipolesimulation(cfg);
     
     disp(['Computing dipole at phase: ',num2str(m)])
     

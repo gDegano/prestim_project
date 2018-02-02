@@ -13,7 +13,7 @@ function [ istan_freq ] = CCN_freq_slide(data2use,opts,central_freq,num_cycles)
 %         central_freq = central frequency of the wavelet
 %         num_cycles   = number of cycles in the window (default 4)
 %
-% OUTPUT: instan_freq  = 1xN-1 time vector with instantaneous frequency
+% OUTPUT: instan_freq  = 1xN time vector with instantaneous frequency
 %
 % ------
 % FS code adapted from public online resources by Mike X Cohen
