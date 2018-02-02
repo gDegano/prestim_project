@@ -1,5 +1,14 @@
 function [ yy,tt] = CCN_AR_pred(data2interp,time2interp,opts )
-% AR interpolation as predictor
+% AR prediction
+%
+%
+% ------
+% Jan,2018 Giulio Degano & Steffen Buergers
+% CCN LAB
+% University of Birmingham
+% GXD606@student.bham.ac.uk 
+% SXB1173@student.bham.ac.uk 
+
 
 %Init data
 ys=data2interp';
@@ -57,25 +66,30 @@ end
 
 %% Noise variance estimation
 
+% Period
 Ts=1/opts.srate;
-N=length(ys);
-% ar estim
-model = ar(ys, p, 'yw', 'Ts', Ts);
 
+% AR estimation of noise (Yule Walker... can be changed to LS)
+model = ar(ys, p, 'yw', 'Ts', Ts);
 sigma2=model.NoiseVariance;
+
+% Conv with pinknoise
 ynoise = pinknoise(sqrt(sigma2),length(tt_pred));
 yy_pred_noise=yy_pred+ynoise;
 
-% close
-% figure('Position', [0 0 1800 1000])
-% subplot(211)
-% plot(ts,ys)
-% hold on
-% plot(tt_pred,yy_pred)
-% subplot(212)
-% plot(ts,ys)
-% hold on
-% plot(tt_pred,yy_pred_noise)
+
+%% Plots to check stuff
+
+close
+figure('Position', [0 0 1800 1000])
+subplot(211)
+plot(ts,ys)
+hold on
+plot(tt_pred,yy_pred)
+subplot(212)
+plot(ts,ys)
+hold on
+plot(tt_pred,yy_pred_noise)
 
 %% Update
 

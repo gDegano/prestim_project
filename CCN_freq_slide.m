@@ -22,7 +22,6 @@ end
 
 if opts.model==1
     opts.secPH=.2;
-%    [yy] = CCN_param_estim(data2use,opts.times,opts );
     [yy] = CCN_AR_pred(data2use,opts.times(1:opts.srate*2),opts);
 else
     yy=data2use;

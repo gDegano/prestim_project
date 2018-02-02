@@ -15,7 +15,7 @@ else
 end
 
 % generate white noise
-x = sigma*randn(1, M);
+x = randn(1, M);
 
 % FFT
 X = fft(x);

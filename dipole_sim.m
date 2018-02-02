@@ -62,7 +62,8 @@ for m=1:length(phase_b)
             central_freq=10;
             num_cycles=5;
             temp_freq=CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
-            freqslideFilt(:,k,j) = temp_freq(1:EEGopts.srate*2);%
+            freqslideFilt(:,k,j) = temp_freq(1:EEGopts.srate*2);
+            pause(0.5)
         end
         disp(['Computing trial #',num2str(j)])
     end
@@ -79,9 +80,7 @@ for m=[1 2 3 5]
 end
 legend(LEGEND{:},'Location','Best')
 
-
-
-%% REAL DATA
+%% REAL DATA (GT)
 
 AVG_median_real=nan(length(phase_b),length(EEGopts.times));
 EEGopts.model=0;
