@@ -1,13 +1,24 @@
 function [ istan_freq ] = CCN_freq_slide(data2use,opts,central_freq,num_cycles)
-% Frequency sliding extraction
-% INPUT : data2use = 1xN time vector (channel/sensor/whatever)
-%         opts.pnts = number of datapoints
-%         opts.srate = sampling freq
-%         central_freq = central frequency of the wavelet
-%         num_cycles = number of cycles in the window (default 4)
+% Frequency sliding extraction following the method outlined in Cohen (2014):
+%     Fluctuations in oscillation frequency control spike timing and coordinate 
+%     neural networks. The Journal of Neuroscience, 2 July 2014, 34(27): 8988-8998; 
+%     doi: 10.1523/JNEUROSCI.0261-14.2014
 %
+% Instantaneous frequency is defined as the change in phase per unit time, 
+% i.e. the temporal derivative of the phase angle time-series. 
+%
+% INPUT : data2use     = 1xN time vector 
+%         opts.pnts    = number of datapoints
+%         opts.srate   = sampling freq
+%         central_freq = central frequency of the wavelet
+%         num_cycles   = number of cycles in the window (default 4)
+%
+% OUTPUT: instan_freq  = 1xN-1 time vector with instantaneous frequency
 %
 % ------
+% FS code adapted from public online resources by Mike X Cohen
+% www.mikexcohen.com/
+% 
 % Jan,2018 Giulio Degano & Steffen Buergers
 % CCN LAB
 % University of Birmingham
