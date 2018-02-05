@@ -15,7 +15,7 @@ Ts=1/opts.srate;
 % PH
 numPeriods=round(opts.secPH*opts.srate);
 ys=data2interp;
-p=15;
+p=7;
 
 % To data obj
 data = iddata(ys',[],Ts);
