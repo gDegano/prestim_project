@@ -33,10 +33,10 @@ end
 
 if opts.model==1
     opts.secPH=.5;
-   
-    %[yy] = CCN_ARIMA_pred(data2use,opts.times,opts);
     [yy] = CCN_AR_pred(data2use,opts.times,opts);
-    
+elseif opts.model==2
+    opts.secPH=.5;
+    [yy] = CCN_ARMAX_pred(data2use,opts.times,opts);
 else
     yy=data2use;
 end

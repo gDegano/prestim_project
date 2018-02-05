@@ -1,4 +1,4 @@
-function [ yy,tt] = CCN_AR_pred(data2interp,time2interp,opts )
+function [ yy,tt] = CCN_ARMAX_pred(data2interp,time2interp,opts )
 % ARIMA prediction
 %
 %
@@ -9,18 +9,24 @@ function [ yy,tt] = CCN_AR_pred(data2interp,time2interp,opts )
 % GXD606@student.bham.ac.uk 
 % SXB1173@student.bham.ac.uk 
 
+numPeriods=opts.secPH*opts.srate;
+ts=time2interp;
+ys=data2interp;
 
 % Period
 Ts=1/opts.srate;
 % PH
 numPeriods=round(opts.secPH*opts.srate);
 ys=data2interp;
-p=15;
 
 % To data obj
 data = iddata(ys',[],Ts);
 % Modelling....
-model = ar(data, p, 'yw', 'Ts', Ts);
+opt = armaxOptions;
+opt.Regularization.Lambda = 2;
+na=25;
+nc=10;
+model = armax(data, [na nc],opt);
 sigma2=model.NoiseVariance;
 % Forecasting
 yy = forecast(model,data,numPeriods);
