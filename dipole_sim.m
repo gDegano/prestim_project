@@ -6,6 +6,9 @@ warning off
 
 %% CREATING DIPOLE
 
+% Do we want to plot our dipole model?
+show_dipole_model = true;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % General settings
 trl_sec       = 3; % has to be 3 atm  
@@ -14,51 +17,62 @@ EEGopts.pnts  = EEGopts.srate*trl_sec';
 EEGopts.times = -trl_sec+1/EEGopts.srate:1/EEGopts.srate:0;
 n_trl         = 10;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-% Creating setup of volumes and electrodes
-elec = [];
-n_chan = 64;
-elec.pnt = randn(n_chan,3); % 0 to 1 on three dim
-dum = sqrt(sum(elec.pnt.^2,2));
-elec.pnt = elec.pnt ./ [dum dum dum]; % scale them to a unit sphere
-for i=1:n_chan
-   elec.label{i} = sprintf('%03d', i);
-end
-vol = [];
-vol.r    = [0.88 0.92 1.00]; % radii of spheres
-vol.cond = [1 1/80 1];       % conductivity
-vol.o    = [0 0 0];          % center of sphere
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load a canonical, realistic headmodel using FieldTrip template
 headmodel = load('standard_bem.mat');
 
-% % Visualise template headmodel
-% figure
-% ft_plot_mesh(headmodel.vol.bnd(1), 'facecolor', 'r',    'surfaceonly', 'yes', 'facealpha', 0.1); hold on
-% ft_plot_mesh(headmodel.vol.bnd(2), 'facecolor', 'g',    'surfaceonly', 'yes', 'facealpha', 0.1);
-% ft_plot_mesh(headmodel.vol.bnd(3), 'facecolor', 'skin', 'surfaceonly', 'no',  'facealpha', 0.1);
+% Load standard electrode positions
+elec_stnd = ft_read_sens('standard_1020.elc');
+n_chan     = size(elec_stnd.label,1);
 
+% Location of the dipole
+ROI_dipole = [+20 -70 50]; % left posterior parietal cortex
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Simulating dipole with filter bank
 phase_b=0:pi/4:pi;
 raw = cell(length(phase_b),1);
 for m=1:length(phase_b)
     
     cfg = [];
-    cfg.headmodel     = vol;             % see above
-    cfg.elec          = elec;            % see above
-    cfg.dip.pos       = [0 0.5 0.3];
+    cfg.headmodel     = headmodel.vol;   % see above
+    cfg.elec          = elec_stnd;       % see above
+    cfg.dip.pos       = ROI_dipole;
     cfg.dip.mom       = [1 0 0]';        % note, it should be transposed
     cfg.dip.frequency = 10;
     cfg.dip.phase     = phase_b(m);
     cfg.ntrials       = n_trl;
     cfg.triallength   = trl_sec;
     cfg.fsample       = EEGopts.srate;
-    cfg.relnoise      = 3;
-    cfg.headmodel     = headmodel.vol;
+    cfg.relnoise      = 0;
     raw{m} = ft_dipolesimulation(cfg);
     
     disp(['Computing dipole at phase: ',num2str(m)])
+    
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+% Fit dipole of example simulation and visualise
+if show_dipole_model
+    
+    % average over trials for example simulation
+    avg1 = ft_timelockanalysis([], raw{m});
+    
+    % do a dipole fit of the simulated dataset
+    cfg      = [];
+    cfg.vol  = headmodel.vol;
+    cfg.elec = elec_stnd;
+    cfg.dip.pos = [0 0 0];  % initial search position
+    cfg.gridsearch = 'no';
+    dip1 = ft_dipolefitting(cfg, avg1);
+    
+    % Visualise dipole fit
+    figure
+    ft_plot_mesh(headmodel.vol.bnd(1), 'facecolor', 'r',    'surfaceonly', 'yes', 'facealpha', 0.1); hold on
+    ft_plot_mesh(headmodel.vol.bnd(2), 'facecolor', 'g',    'surfaceonly', 'yes', 'facealpha', 0.1);
+    ft_plot_mesh(headmodel.vol.bnd(3), 'facecolor', 'skin', 'surfaceonly', 'no',  'facealpha', 0.1);
+    plot3(elec_stnd.chanpos(:,1), elec_stnd.chanpos(:,2), elec_stnd.chanpos(:,3), '*b');
+    plot3(ROI_dipole(1), ROI_dipole(2), ROI_dipole(3), 'om', 'linewidth', 5)
+    plot3(dip1.dip.pos(1), dip1.dip.pos(2), dip1.dip.pos(3), 'oy', 'linewidth', 5)
     
 end
 
@@ -67,7 +81,12 @@ end
 
 clc
 AVG_median=nan(length(phase_b),length(EEGopts.times)-EEGopts.srate);
-EEGopts.model=1;
+EEGopts.model = []; % 1 = AR; 2 = ARMA
+EEGopts.method     = 'hilbert';
+EEGopts.plotfilt   = true;
+EEGopts.filtwin    = [6 14];
+EEGopts.transwidth = 0.15;
+EEGopts.figures    = true;
 for m=1:length(phase_b)
    
     disp(['Computing phase: ',num2str(m)])
@@ -129,9 +148,7 @@ for m=[1 2 3 5]
 end
 legend(LEGEND{:},'Location','Best')
 
-
-
-
+% // eof
 
 
 

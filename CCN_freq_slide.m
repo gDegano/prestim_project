@@ -149,7 +149,7 @@ elseif strcmp(opts.method, 'hilbert')
     end
     
     % this part does the actual filtering
-    filtdata = filtfilt(filtwghts,1, double(yy));
+    filtdata = filtfilt(filtwghts, 1, double(yy));
     
     % hilbert transform
     hilsig = hilbert(filtdata);
