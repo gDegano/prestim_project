@@ -1,6 +1,8 @@
 clc
 clear
 
+addpath('mutual_information_toolbox');
+
 warning off
 
 prestim=load('eeg_sample_to_model.mat'); % data to model (only prestim 2 sec)
