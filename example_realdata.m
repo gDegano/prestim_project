@@ -1,29 +1,73 @@
+% Comput frequency characteristics for actual EEG data using different
+% preprocessing methods. We assume that EEG data consists of single trials
+% with a stimulus onset at t=0, however, these data do not contain any
+% stimulus at t=0. 
+%
+% The different methods are designed to address the problem of
+% post-stimulus activity bleeding into the pre-stimulus analysis. The
+% different methods are
+% 1.) Real EEG data (simply include the post-stimulus data in the analysis)
+% 2.) Zero-padding after t=0
+% 3.) Mirror-padding after t=0
+% 4.) Autoregressive model (AR), forecast data after t=0
+% 5.) Autoregressive moving average model (ARMA), forecast data after t=0
+%
+% Freqeuency characteristics to be estimated are
+% i.)   Freqeuency sliding (instantaneous frequency)
+% ii.)  Instantaneous phase
+% iii.) Inter-trial coherence
+% iv.)  Power in time frequency domain
+%
+% ------
+% FS code adapted from public online resources by Mike X Cohen
+% www.mikexcohen.com/
+% 
+% Feb,2018 Giulio Degano & Steffen Buergers
+% CCN LAB
+% University of Birmingham
+% GXD606@student.bham.ac.uk 
+% SXB1173@student.bham.ac.uk 
+
 clc
 clear
 
-addpath('mutual_information_toolbox');
-
 warning off
 
-prestim=load('eeg_sample_to_model.mat'); % data to model (only prestim 2 sec)
-complete=load('eeg_sample.mat'); % complete data (3 sec)
+
+
+%% Load data
 
 % Each files contains the following data:
 %   DATA = 3D matrix (chan x time x trl)
 %   EEG  = structure containing Fs rate and time vector
+prestim=load('eeg_sample_to_model.mat'); % data to model (only prestim 2 sec)
+complete=load('eeg_sample.mat'); % complete data (3 sec)
+
+% Add dependencies
+addpath('mutual_information_toolbox');
+
+
 
 %% Debug settings
+
+% Select single channel to speed up processing
 prestim.DATA  = prestim.DATA(1,:,:);
 complete.DATA = complete.DATA(1,:,:);
 
 
+% Useful variables
 n_trl=size(prestim.DATA,3);
 n_chan=size(prestim.DATA,1);
+
+% Wavelet parameters (if you want to use method='wavelet')
 central_freq=10;
 num_cycles=5;
 
 
+
 %% Compute with real data
+
+disp('Compute with real data')
 
 EEGopts.pnts       = size(complete.DATA,2);
 EEGopts.srate      = complete.EEG.srate;
@@ -35,23 +79,26 @@ EEGopts.filtwin    = [6 14];
 EEGopts.transwidth = 0.15;
 EEGopts.figures    = false;
 
-freqslideFilt_c=zeros(size(complete.DATA,2),n_chan,n_trl);
-dataAll_c = zeros(n_trl, n_chan, size(complete.DATA,2));
+freqslideFilt_c = zeros(size(complete.DATA,2),n_chan,n_trl);
+[dataAll_c, dataCmplx_c] = deal(zeros(n_trl, n_chan, size(complete.DATA,2)));
 for j=1:n_trl
     for k=1:n_chan
         data2use = squeeze(complete.DATA(k,:,j));
-        [temp_freq, data_out] = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
-        dataAll_c(j,k,:) = data_out;
+        [temp_freq, temp_out, temp_cmplx] = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
+        dataAll_c(j,k,:) = temp_out;
+        dataCmplx_c(j,k,:) = temp_cmplx;
         freqslideFilt_c(:,k,j) = temp_freq(1:EEGopts.pnts);
-        %pause(0.5)
     end
     disp(['Computing trial #',num2str(j)])
 end
-AVG_median_c=mean(mean(freqslideFilt_c,3),2);
+fslide_c = mean(mean(freqslideFilt_c,3),2); % Inst. frequency GA
+[ avgPhase_c, itc_c ] = CCN_getITC( dataCmplx_c );
 
 
 
 %% Compute with zero padding
+
+disp('Compute with zero padding')
 
 EEGopts.pnts       = size(complete.DATA,2);
 EEGopts.srate      = complete.EEG.srate;
@@ -65,22 +112,25 @@ EEGopts.figures    = false;
 
 freqslideFilt_zp=zeros(size(complete.DATA,2),n_chan,n_trl);
 data2use = zeros(1,size(complete.DATA,2));
-dataAll_zp = zeros(n_trl, n_chan, size(data2use,2));
+[dataAll_zp, dataCmplx_zp] = deal(zeros(n_trl, n_chan, size(complete.DATA,2)));
 for j=1:n_trl
     for k=1:n_chan
         data2use(1,1:size(prestim.DATA,2)) = squeeze(prestim.DATA(k,:,j));
-        [temp_freq, data_out] = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
-        dataAll_zp(j,k,:) = data_out;
+        [temp_freq, temp_out, temp_cmplx] = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
+        dataAll_zp(j,k,:) = temp_out;
+        dataCmplx_zp(j,k,:) = temp_cmplx;
         freqslideFilt_zp(:,k,j) = temp_freq(1:EEGopts.pnts);
-        %pause(0.5)
     end
     disp(['Computing trial #',num2str(j)])
 end
-AVG_median_zp=mean(mean(freqslideFilt_zp,3),2);
+fslide_zp = mean(mean(freqslideFilt_zp,3),2);
+[ avgPhase_zp, itc_zp ] = CCN_getITC( dataCmplx_zp );
 
 
 
 %% Compute with mirror padding
+
+disp('Compute with mirror padding')
 
 EEGopts.pnts       = size(complete.DATA,2);
 EEGopts.srate      = complete.EEG.srate;
@@ -94,24 +144,27 @@ EEGopts.figures    = false;
 
 freqslideFilt_mp=zeros(size(complete.DATA,2),n_chan,n_trl);
 data2use = zeros(1,size(complete.DATA,2));
-dataAll_mp = zeros(n_trl, n_chan, size(data2use,2));
+[dataAll_mp, dataCmplx_mp] = deal(zeros(n_trl, n_chan, size(complete.DATA,2)));
 for j=1:n_trl
     for k=1:n_chan
         pre_stim_temp = squeeze(prestim.DATA(k,:,j));
         data2use(1,1:size(prestim.DATA,2)) = pre_stim_temp;
         data2use(1,size(prestim.DATA,2)+1:end) = pre_stim_temp(1,end-1:-1:size(pre_stim_temp,2)-size(data2use(1,size(prestim.DATA,2)+1:end),2));
-        [temp_freq, data_out] = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
-        dataAll_mp(j,k,:) = data_out;
+        [temp_freq, temp_out, temp_cmplx] = CCN_freq_slide(data2use,EEGopts,central_freq,num_cycles);
+        dataAll_mp(j,k,:) = temp_out;
+        dataCmplx_mp(j,k,:) = temp_cmplx;
         freqslideFilt_mp(:,k,j) = temp_freq(1:EEGopts.pnts);
-        %pause(0.5)
     end
     disp(['Computing trial #',num2str(j)])
 end
-AVG_median_mp=mean(mean(freqslideFilt_mp,3),2);
+fslide_mp = mean(mean(freqslideFilt_mp,3),2);
+[ avgPhase_mp, itc_mp ] = CCN_getITC( dataCmplx_mp );
 
 
 
 %% Compute with ARMA model
+
+disp('Compute with ARMA model')
 
 EEGopts_model.pnts       = size(prestim.DATA,2);
 EEGopts_model.srate      = prestim.EEG.srate;
@@ -124,22 +177,25 @@ EEGopts_model.transwidth = 0.15;
 EEGopts_model.figures    = false;
 
 freqslideFilt=zeros(size(complete.DATA,2),n_chan,n_trl);
-dataAll_arma = zeros(n_trl, n_chan, size(complete.DATA,2));
+[dataAll_arma, dataCmplx_arma] = deal(zeros(n_trl, n_chan, size(complete.DATA,2)));
 for j=1:n_trl
     for k=1:n_chan
         data2use = squeeze(prestim.DATA(k,:,j));
-        [temp_freq, data_out] = CCN_freq_slide(data2use,EEGopts_model,central_freq,num_cycles);
-        dataAll_arma(j,k,1:length(data_out)) = data_out;
-        freqslideFilt(1:length(data_out),k,j) = temp_freq;
-        %pause(0.5)
+        [temp_freq, temp_out, temp_cmplx] = CCN_freq_slide(data2use,EEGopts_model,central_freq,num_cycles);
+        dataAll_arma(j,k,1:length(temp_out)) = temp_out;
+        dataCmplx_arma(j,k,1:length(temp_out)) = temp_cmplx;
+        freqslideFilt(1:length(temp_out),k,j) = temp_freq;
     end
     disp(['Computing trial #',num2str(j)])
 end
-AVG_median_arma=mean(mean(freqslideFilt,3),2);
+fslide_arma = mean(mean(freqslideFilt,3),2);
+[ avgPhase_arma, itc_arma ] = CCN_getITC( dataCmplx_arma );
 
 
 
 %% Compute with AR model
+
+disp('Compute with AR model')
 
 EEGopts_model.pnts       = size(prestim.DATA,2);
 EEGopts_model.srate      = prestim.EEG.srate;
@@ -152,25 +208,26 @@ EEGopts_model.transwidth = 0.15;
 EEGopts_model.figures    = false;
 
 freqslideFilt=zeros(size(complete.DATA,2),n_chan,n_trl);
-dataAll_ar = zeros(n_trl, n_chan, size(complete.DATA,2));
+[dataAll_ar, dataCmplx_ar] = deal(zeros(n_trl, n_chan, size(complete.DATA,2)));
 for j=1:n_trl
     for k=1:n_chan
         data2use = squeeze(prestim.DATA(k,:,j));
-        [temp_freq, data_out] = CCN_freq_slide(data2use,EEGopts_model,central_freq,num_cycles);
-        dataAll_ar(j,k,1:length(data_out)) = data_out;
-        freqslideFilt(1:length(data_out),k,j) = temp_freq;
-        %pause(0.5)
+        [temp_freq, temp_out, temp_cmplx] = CCN_freq_slide(data2use,EEGopts_model,central_freq,num_cycles);
+        dataAll_ar(j,k,1:length(temp_out)) = temp_out;
+        dataCmplx_ar(j,k,1:length(temp_out)) = temp_cmplx;
+        freqslideFilt(1:length(temp_out),k,j) = temp_freq;
     end
     disp(['Computing trial #',num2str(j)])
 end
-AVG_median_ar=mean(mean(freqslideFilt,3),2);
+fslide_ar = mean(mean(freqslideFilt,3),2);
+[ avgPhase_ar, itc_ar ] = CCN_getITC( dataCmplx_ar );
 
 
 
 %% Plots
 
 % size of prediction window for models
-pw   = length(data_out);
+pw   = length(temp_out);
 time = EEGopts.times;
 
 % plot input data
@@ -188,13 +245,26 @@ plotspecs; grid on
 
 % plot output data (FS)
 figure('color', 'w', 'position', [50 50 700 500])
-plot(time(1:pw),AVG_median_zp(1:pw),  'r'); hold on     % Zero-padded
-plot(time(1:pw),AVG_median_mp(1:pw),  'm')              % Mirror-padded 
-plot(time(1:pw),AVG_median_ar(1:pw),  'g')              % AR model
-plot(time(1:pw),AVG_median_arma(1:pw),'b')              % ARMA model
-plot(time(1:pw),AVG_median_c(1:pw),   'k')              % ERP
+plot(time(1:pw),fslide_zp(1:pw),  'r'); hold on     % Zero-padded
+plot(time(1:pw),fslide_mp(1:pw),  'm')              % Mirror-padded 
+plot(time(1:pw),fslide_ar(1:pw),  'g')              % AR model
+plot(time(1:pw),fslide_arma(1:pw),'b')              % ARMA model
+plot(time(1:pw),fslide_c(1:pw),   'k')              % ERP
 xlim([-0.5, 0.25]); ylim([7 11]); 
-title('Output data'); xlabel('Time'); ylabel('Amplitude');
+title('Output data (instantaneous frequency)'); xlabel('Time'); ylabel('Amplitude');
+legend({'Zero-padded', 'Mirror-padded', 'AR', 'ARMA', 'ERP'}, 'location', 'NorthWest')
+plotspecs; grid on
+
+
+% plot output data (ITC)
+figure('color', 'w', 'position', [50 50 700 500])
+plot(time(1:pw),itc_zp(1:pw),  'r'); hold on     % Zero-padded
+plot(time(1:pw),itc_mp(1:pw),  'm')              % Mirror-padded 
+plot(time(1:pw),itc_ar(1:pw),  'g')              % AR model
+plot(time(1:pw),itc_arma(1:pw),'b')              % ARMA model
+plot(time(1:pw),itc_c(1:pw),   'k')              % ERP
+xlim([-0.5, 0.25]);
+title('Output data (inter-trial coherence)'); xlabel('Time'); ylabel('Amplitude');
 legend({'Zero-padded', 'Mirror-padded', 'AR', 'ARMA', 'ERP'}, 'location', 'NorthWest')
 plotspecs; grid on
 
@@ -203,9 +273,9 @@ plotspecs; grid on
 %% Goodness of fit 
 
 time_1sec=EEGopts.times(EEGopts.times>=-1 & EEGopts.times<=0);
-freq_slide_1sec_AR=AVG_median_ar(pw-EEGopts.srate:pw);
-freq_slide_1sec_zp=AVG_median_zp(pw-EEGopts.srate:pw);
-freq_slide_1sec_real=AVG_median_c(EEGopts.times>=-1 & EEGopts.times<=0);
+freq_slide_1sec_AR=fslide_ar(pw-EEGopts.srate:pw);
+freq_slide_1sec_zp=fslide_zp(pw-EEGopts.srate:pw);
+freq_slide_1sec_real=fslide_c(EEGopts.times>=-1 & EEGopts.times<=0);
 
 % Samplig points to evaluate goodness of estimation
 npoints=75;
@@ -223,16 +293,25 @@ disp(['Zero padding :',num2str(gcmi_cc(freq_slide_1sec_zp(end-npoints:end),freq_
 % RMSE sqrt(ei^2) with ei = yi - y~i
 e_AR=freq_slide_1sec_AR(end-npoints:end)-freq_slide_1sec_real(end-npoints:end);
 e_zp=freq_slide_1sec_zp(end-npoints:end)-freq_slide_1sec_real(end-npoints:end);
-disp(['RMSE for last ',num2str(round(npoints/EEGopts.srate*1000,0)),' ms: '])
+disp(['RMSE for last ',num2str(round(npoints/EEGopts.srate*1000)),' ms: '])
 disp(['AR :',num2str(sqrt(mean(e_AR.^2)))])
 disp(['Zero padding :',num2str(sqrt(mean(e_zp.^2)))])
 
 % sMAPE = mean(200|ei|/(yi+y~i))
 div_AR=freq_slide_1sec_AR(end-npoints:end)+freq_slide_1sec_real(end-npoints:end);
 div_zp=freq_slide_1sec_zp(end-npoints:end)+freq_slide_1sec_real(end-npoints:end);
-disp(['sMAPE for last ',num2str(round(npoints/EEGopts.srate*1000,0)),' ms: '])
+disp(['sMAPE for last ',num2str(round(npoints/EEGopts.srate*1000)),' ms: '])
 disp(['AR :',num2str(mean(200*abs(e_AR)./div_AR))])
 disp(['Zero padding :',num2str(mean(200*abs(e_zp)./div_zp))])
+
+
+
+% // eof
+
+
+
+
+
 
 
 
