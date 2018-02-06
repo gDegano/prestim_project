@@ -70,9 +70,9 @@ if show_dipole_model
     ft_plot_mesh(headmodel.vol.bnd(1), 'facecolor', 'r',    'surfaceonly', 'yes', 'facealpha', 0.1); hold on
     ft_plot_mesh(headmodel.vol.bnd(2), 'facecolor', 'g',    'surfaceonly', 'yes', 'facealpha', 0.1);
     ft_plot_mesh(headmodel.vol.bnd(3), 'facecolor', 'skin', 'surfaceonly', 'no',  'facealpha', 0.1);
-    plot3(elec_stnd.chanpos(:,1), elec_stnd.chanpos(:,2), elec_stnd.chanpos(:,3), '*b');
+    plot3(elec_stnd.chanpos(:,1), elec_stnd.chanpos(:,2), elec_stnd.chanpos(:,3), '*b', 'linewidth', 3);
     plot3(ROI_dipole(1), ROI_dipole(2), ROI_dipole(3), 'om', 'linewidth', 5)
-    plot3(dip1.dip.pos(1), dip1.dip.pos(2), dip1.dip.pos(3), 'oy', 'linewidth', 5)
+    %plot3(dip1.dip.pos(1), dip1.dip.pos(2), dip1.dip.pos(3), 'oy', 'linewidth', 5)
     
 end
 

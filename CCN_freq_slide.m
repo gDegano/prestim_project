@@ -1,4 +1,4 @@
-function [ istan_freq ] = CCN_freq_slide(data2use,opts,central_freq,num_cycles)
+function [ instan_freq, yy, cmplx_data ] = CCN_freq_slide(data2use,opts,central_freq,num_cycles)
 % Frequency sliding extraction following the method outlined in Cohen (2014):
 %     Fluctuations in oscillation frequency control spike timing and coordinate 
 %     neural networks. The Journal of Neuroscience, 2 July 2014, 34(27): 8988-8998; 
@@ -26,6 +26,10 @@ function [ istan_freq ] = CCN_freq_slide(data2use,opts,central_freq,num_cycles)
 %         num_cycles   = number of cycles in the window (default 4)
 %
 % OUTPUT: instan_freq  = 1xN time vector with instantaneous frequency
+%         yy           = modeled data (corresponds to input data if
+%                        opts.model is not in [1,2])
+%         cmplx_data   = Complex signal after hilbert transform or wavelet
+%                        convolution (used to compute instan_freq)
 %
 % ------
 % FS code adapted from public online resources by Mike X Cohen
@@ -115,9 +119,9 @@ if strcmp(opts.method, 'wavelet')
     cmwX  = cmwX ./ max(cmwX);
 
     % convolution and freq slides
-    filtdata = ifft( fft(yy,nConv) .* cmwX );
-    filtdata = filtdata(hwave+1:end-hwave);
-    freqslide = fs*diff(unwrap(angle(filtdata)))/(2*pi);
+    cmplx_data = ifft( fft(yy,nConv) .* cmwX );
+    cmplx_data = cmplx_data(hwave+1:end-hwave);
+    freqslide = fs*diff(unwrap(angle(cmplx_data)))/(2*pi);
 
 elseif strcmp(opts.method, 'hilbert')
     
@@ -145,17 +149,17 @@ elseif strcmp(opts.method, 'hilbert')
         plot(hz_filtkern,fft_filtkern(1:ceil(length(fft_filtkern)/2)),'b')
         set(gca,'ylim',[-.1 1.1],'xlim',[0 nyquist])
         xlabel('Frequency');
-        legend({'ideal';'best fit'}); xlim([1 35])
+        legend({'ideal';'applied'}); xlim([1 35])
     end
     
     % this part does the actual filtering
     filtdata = filtfilt(filtwghts, 1, double(yy));
     
     % hilbert transform
-    hilsig = hilbert(filtdata);
+    cmplx_data = hilbert(filtdata);
     
     % FS
-    freqslide = fs*diff(unwrap(angle(hilsig)))/(2*pi);
+    freqslide = fs*diff(unwrap(angle(cmplx_data)))/(2*pi);
     
 end
 
@@ -171,7 +175,7 @@ for oi=1:n_order
     end
 end
 % the final step is to take the mean of medians
-istan_freq = mean(phasedmed,1);
+instan_freq = mean(phasedmed,1);
 
 
 %% Optional figures
@@ -184,18 +188,18 @@ if opts.figures
     ylabel('Amplitude (\muV)')
 
     subplot(312)
-    plot(opts.times(1:length(yy)),angle(filtdata))
+    plot(opts.times(1:length(yy)),angle(cmplx_data))
     ylabel('Phase angles (rad.)')
 
     subplot(313)
-    freqslide = fs*diff(unwrap(angle(filtdata)))/(2*pi);
+    freqslide = fs*diff(unwrap(angle(cmplx_data)))/(2*pi);
     plot(opts.times(1:length(yy)-1),freqslide)
     ylabel('Frequency (Hz)')
     set(gca,'ylim',[freq2use*.75 freq2use*1.5])
 
     subplot(313)
     hold on
-    plot(opts.times(1:length(yy)),istan_freq,'r')
+    plot(opts.times(1:length(yy)),instan_freq,'r')
     
 end
 
