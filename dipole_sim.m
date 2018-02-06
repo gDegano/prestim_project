@@ -3,6 +3,7 @@ clear
 
 warning off
 
+
 %% CREATING DIPOLE
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -29,8 +30,18 @@ vol.cond = [1 1/80 1];       % conductivity
 vol.o    = [0 0 0];          % center of sphere
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Load a canonical, realistic headmodel using FieldTrip template
+headmodel = load('standard_bem.mat');
+
+% % Visualise template headmodel
+% figure
+% ft_plot_mesh(headmodel.vol.bnd(1), 'facecolor', 'r',    'surfaceonly', 'yes', 'facealpha', 0.1); hold on
+% ft_plot_mesh(headmodel.vol.bnd(2), 'facecolor', 'g',    'surfaceonly', 'yes', 'facealpha', 0.1);
+% ft_plot_mesh(headmodel.vol.bnd(3), 'facecolor', 'skin', 'surfaceonly', 'no',  'facealpha', 0.1);
+
 % Simulating dipole with filter bank
 phase_b=0:pi/4:pi;
+raw = cell(length(phase_b),1);
 for m=1:length(phase_b)
     
     cfg = [];
@@ -44,11 +55,13 @@ for m=1:length(phase_b)
     cfg.triallength   = trl_sec;
     cfg.fsample       = EEGopts.srate;
     cfg.relnoise      = 3;
+    cfg.headmodel     = headmodel.vol;
     raw{m} = ft_dipolesimulation(cfg);
     
     disp(['Computing dipole at phase: ',num2str(m)])
     
 end
+
 
 %% MODELS
 
