@@ -77,12 +77,15 @@ if ~isfield(opts, 'figures')
     opts.figures = false;
 end
 
+% length of window to predict (in seconds)
+if ~isfield(opts, 'secPH')
+    opts.secPH=.5; 
+end
+
 % Prediction method
-if opts.model==1
-    opts.secPH=.5;
+if opts.model==1    
     [yy] = CCN_AR_pred(data2use,opts.times,opts);
 elseif opts.model==2
-    opts.secPH=.5;
     [yy] = CCN_ARMAX_pred(data2use,opts.times,opts);
 else
     yy=data2use;

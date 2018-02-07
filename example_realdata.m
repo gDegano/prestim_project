@@ -210,6 +210,8 @@ EEGopts_model.plotfilt   = false;
 EEGopts_model.filtwin    = [6 14];
 EEGopts_model.transwidth = 0.15;
 EEGopts_model.figures    = false;
+EEGopts_model.secPH      = 0.5; % forecast 0.5 seconds
+EEGopts_model.order      = 2*round(EEGopts_model.secPH*EEGopts_model.srate);
 
 freqslideFilt=zeros(size(complete.DATA,2),n_chan,n_trl);
 [dataAll_ar, dataCmplx_ar] = deal(zeros(n_trl, n_chan, size(complete.DATA,2)));
@@ -229,15 +231,15 @@ power_ar = squeeze(mean(abs(dataCmplx_ar),1));
 
 
 
-%% Plots
+%% Figures
 
 % size of prediction window for models
 pw   = length(temp_out);
 time = EEGopts.times;
-xl = [-0.5, 0];
+xl = [-0.5, 0.25];
 
 % plot input data (single trial)
-fh(1) = figure('color', 'w', 'position', [50 50 500 250]);
+fh(1) = figure('color', 'w', 'position', [50 350 500 250]);
 plot(time, squeeze(dataAll_zp(1,1,:)), 'r'); hold on      % Zero-padded
 plot(time, squeeze(dataAll_mp(1,1,:)), 'm');              % Mirror-padded
 plot(time(1:pw), squeeze(dataAll_ar(1,1,1:pw)), 'g');     % AR model
@@ -245,12 +247,15 @@ plot(time(1:pw), squeeze(dataAll_arma(1,1,1:pw)), 'b');   % ARMA model
 plot(time, squeeze(dataAll_c(1,1,:)), 'k');               % ERP
 xlim(xl); 
 title('Input data'); xlabel('Time'); ylabel('Amplitude');
-%legend({'Zero-padded', 'Mirror-padded', 'AR', 'ARMA', 'Data'}, 'location', 'NorthWest')
+legend({'Zero-padded', 'Mirror-padded', 'AR', 'ARMA', 'Data'}, 'location', 'NorthWest')
 plotspecs; grid on
 
+% for other figures let's ignore what happens after t=0, we are not
+% interested in that!
+xl = [-0.5, 0];
 
 % plot output data (FS)
-fh(2) = figure('color', 'w', 'position', [50 50 500 250]);
+fh(2) = figure('color', 'w', 'position', [550 50 500 250]);
 plot(time(1:pw),fslide_zp(1:pw),  'r'); hold on     % Zero-padded
 plot(time(1:pw),fslide_mp(1:pw),  'm')              % Mirror-padded 
 plot(time(1:pw),fslide_ar(1:pw),  'g')              % AR model
@@ -262,14 +267,14 @@ plotspecs; grid on
 
 
 % plot output data (POWER)
-fh(3) = figure('color', 'w', 'position', [50 50 500 250]);
+fh(3) = figure('color', 'w', 'position', [550 350 500 250]);
 plot(time(1:pw),power_zp(1:pw),  'r'); hold on     % Zero-padded
 plot(time(1:pw),power_mp(1:pw),  'm')              % Mirror-padded 
 plot(time(1:pw),power_ar(1:pw),  'g')              % AR model
 plot(time(1:pw),power_arma(1:pw),'b')              % ARMA model
 plot(time(1:pw),power_c(1:pw),   'k')              % ERP
 xlim(xl); 
-title('Output data (power)'); xlabel('Time'); ylabel('Amplitude');
+title('Output data (power)'); xlabel('Time'); ylabel('Power');
 plotspecs; grid on
 
 
@@ -284,6 +289,50 @@ xlim(xl);
 title('Output data (inter-trial coherence)'); xlabel('Time'); ylabel('ITC');
 plotspecs; grid on
 
+
+% SUMMARY FIGURE
+% plot input data (single trial)
+fh(5) = figure('color', 'w', 'position', [50 50 1000 650]);
+subplot(221)
+plot(time, squeeze(dataAll_zp(1,1,:)), 'r'); hold on      % Zero-padded
+plot(time, squeeze(dataAll_mp(1,1,:)), 'm');              % Mirror-padded
+plot(time(1:pw), squeeze(dataAll_ar(1,1,1:pw)), 'g');     % AR model
+plot(time(1:pw), squeeze(dataAll_arma(1,1,1:pw)), 'b');   % ARMA model
+plot(time, squeeze(dataAll_c(1,1,:)), 'k');               % ERP
+xl = [-0.5, 0.25]; xlim(xl); 
+title('Input data (single trial)'); xlabel('Time'); ylabel('Amplitude');
+legend({'Zero-padded', 'Mirror-padded', 'AR', 'ARMA', 'Data'}, 'location', 'NorthWest')
+plotspecs; grid on
+% plot output data (FS)
+subplot(222)
+plot(time(1:pw),fslide_zp(1:pw),  'r'); hold on     % Zero-padded
+plot(time(1:pw),fslide_mp(1:pw),  'm')              % Mirror-padded 
+plot(time(1:pw),fslide_ar(1:pw),  'g')              % AR model
+plot(time(1:pw),fslide_arma(1:pw),'b')              % ARMA model
+plot(time(1:pw),fslide_c(1:pw),   'k')              % ERP
+xl = [-0.5, 0]; xlim(xl); 
+title('Output data (instantaneous frequency)'); xlabel('Time'); ylabel('Frequency');
+plotspecs; grid on
+% plot output data (POWER)
+subplot(223)
+plot(time(1:pw),power_zp(1:pw),  'r'); hold on     % Zero-padded
+plot(time(1:pw),power_mp(1:pw),  'm')              % Mirror-padded 
+plot(time(1:pw),power_ar(1:pw),  'g')              % AR model
+plot(time(1:pw),power_arma(1:pw),'b')              % ARMA model
+plot(time(1:pw),power_c(1:pw),   'k')              % ERP
+xlim(xl); 
+title('Output data (power)'); xlabel('Time'); ylabel('Power');
+plotspecs; grid on
+% plot output data (ITC)
+subplot(224)
+plot(time(1:pw),itc_zp(1:pw),  'r'); hold on     % Zero-padded
+plot(time(1:pw),itc_mp(1:pw),  'm')              % Mirror-padded 
+plot(time(1:pw),itc_ar(1:pw),  'g')              % AR model
+plot(time(1:pw),itc_arma(1:pw),'b')              % ARMA model
+plot(time(1:pw),itc_c(1:pw),   'k')              % ERP
+xlim(xl); 
+title('Output data (inter-trial coherence)'); xlabel('Time'); ylabel('ITC');
+plotspecs; grid on
 
 
 %% Goodness of fit 

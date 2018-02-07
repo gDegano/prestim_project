@@ -1,18 +1,19 @@
-function [ yy,tt] = CCN_AR_pred(data2interp,time2interp,opts )
+function [ yy,tt,model] = CCN_AR_pred(data2interp,time2interp,opts )
 % Autoregressive model prediction (AR)
 % 
 % Takes a time series vector as input (1xN) and computes an
 % autoregressive model specified in 'opts' forecasting 'time2interp'
 % datapoints
 %
-% INPUT : data2interp  = 1xN time vector 
-%         time2interp  = number of datapoints to interpolate
+% INPUT : data2interp  = 1xN time vector of data (e.g. EEG signal)
+%         time2interp  = 1xN vector with time values (in seconds)
 %         opts.srate   = sampling freq
-%         opts.secPH   = length of the data in seconds (?)
+%         opts.secPH   = length of the data segment to predict in seconds
 %         opts.order   = number of coefficients of the AR model (default=7)
 %
 % OUTPUT: yy           = time course of original data plus forecast
 %         tt           = timeline of yy
+%         model        = AR model object
 %
 % ------
 % Jan,2018 Giulio Degano & Steffen Buergers
