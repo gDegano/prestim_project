@@ -52,7 +52,14 @@ end
 itc       = squeeze(   abs(mean(stft_norm,1))  );
 avg_phase = squeeze( angle(mean(stft_norm,1))  );
 
+% % show histogram of phase angles
+% figure
+% rose(angle(squeeze(stft_norm(:,400))),20); hold on
+% rose(avg_phase(400), 'color', 'r')
+% plotspecs
+
 return 
+
 % // eof
 
 

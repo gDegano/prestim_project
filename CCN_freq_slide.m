@@ -62,6 +62,11 @@ if strcmp(opts.method, 'hilbert')
     end
 end
 
+% wavelet frequency
+if nargin<3
+    central_freq = 10; 
+end
+
 % wavelet cycles
 if nargin<4
     num_cycles=4;
@@ -103,13 +108,13 @@ end
 % frequency (showing the dominant frequency over time). 
 
 % create some useful variables to make code more readable
-freq2use  = central_freq; % hz
 nData     = length(yy);
 fs        = opts.srate;
 
 if strcmp(opts.method, 'wavelet')
     
     % define convolution parameters
+    freq2use  = central_freq; % hz
     wavt  = -((1/freq2use)*num_cycles)/2:1/fs:((1/freq2use)*num_cycles)/2; % time vector for wavelet
     nKern = length(wavt);
     nConv = nData+nKern-1;
