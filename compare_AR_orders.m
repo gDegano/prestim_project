@@ -217,7 +217,7 @@ EEGopts_model.secPH      = 0.5; % forecast 0.5 seconds
 
 for io = 1:length(orders_AR)
     
-    fprintf('Compute with ARMA model of order %i\n', orders_AR(io))
+    fprintf('Compute with AR model of order %i\n', orders_AR(io))
 
     EEGopts_model.order      = orders_AR(io);
 
